@@ -75,3 +75,35 @@ survey_questions <- function(surveyID) {
 
   return(quest)
 }
+
+read_survey_questions <- function(file_name) {
+
+  # START UP: CHECK ARGUMENTS PASSED BY USER ----
+
+  # check if file exists
+  assert_surveyFile_exists(file_name)
+
+  # Read in the raw qsf file
+  raw_json <- jsonlite::read_json(file_name, simplifyVector = TRUE)
+
+  # Extract the Survey elements. This has info about the survey and questions
+  survey_elemtents <- raw_json[["SurveyElements"]]
+
+  # Filter to only look at survey questions and their payload.
+  question_data <-
+    survey_elemtents[survey_elemtents[["Element"]] == "SQ", ][["Payload"]]
+
+  # Questions, question labels, question names, and force response info
+  quest <- tibble::tibble(
+    qid = purrr::map_chr(question_data, "QuestionID"),
+    qname = purrr::map_chr(question_data, "DataExportTag"),
+    question = purrr::map_chr(question_data, "QuestionText"),
+    force_resp =
+      dplyr::if_else(purrr::map_chr(question_data,
+                                    ~ .$Validation$Settings$ForceResponse) ==
+                       "OFF",
+                     FALSE, TRUE))
+
+  return(quest)
+
+}
